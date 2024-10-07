@@ -1,0 +1,80 @@
+#include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <NewPing.h>
+
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+#define OLED_RESET -1    // Reset pin # (or -1 if sharing Arduino reset pin)
+#define TRIGGER_PIN 12   // GPIO D6
+#define ECHO_PIN 13      // GPIO D7
+#define MAX_DISTANCE 100
+#define LED 15           // GPIO D8
+#define BUZZER_PIN 14    // GPIO D5  to +
+#define MIN_DISTANCE_PERCENTAGE 10
+#define MAX_DISTANCE_PERCENTAGE 90
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
+
+void setup() {
+  Serial.begin(9600);
+
+  pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(LED, OUTPUT);
+
+  // Initialize the OLED display
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x64
+    Serial.println(F("SSD1306 allocation failed"));
+    for (;;)
+      ; // Don't proceed, loop forever
+  }
+  display.clearDisplay();
+  display.display();
+}
+
+void loop() {
+  unsigned int distance = sonar.ping_cm();
+  int distancePercentage = (distance * 100) / MAX_DISTANCE; // percentage
+
+  // for serial monitor
+  Serial.print("Distance: ");
+  Serial.print(distancePercentage);
+  Serial.println(" %");
+
+  // Update to OLED display
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println("    WATER   LEVEL");
+  display.println("  -----------------");
+  display.setTextSize(4);
+  display.setCursor(35, 27);
+  display.print(distancePercentage);
+  display.println("%");
+  display.display();
+
+  // Control Buzzer and LED based on Distance Percentage
+  if (distancePercentage < MIN_DISTANCE_PERCENTAGE || distancePercentage > MAX_DISTANCE_PERCENTAGE) {
+
+    // less than 10% or more than 90% Buzzer on
+    digitalWrite(BUZZER_PIN, HIGH); // Turn on the buzzer
+
+  } else {
+    digitalWrite(BUZZER_PIN, LOW); // Turn off the buzzer
+  }
+
+  // For LED Setup
+if (distancePercentage < MIN_DISTANCE_PERCENTAGE ){   // low water level < 10% LED on
+    digitalWrite(LED,HIGH);
+  }
+  else if (distancePercentage > MAX_DISTANCE_PERCENTAGE){
+    digitalWrite(LED,LOW);
+  }
+  else{
+    digitalWrite(LED,LOW);
+  }
+  delay(1000);
+}
